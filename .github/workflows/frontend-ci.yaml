@@ -1,0 +1,95 @@
+name: Frontend Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'  # This runs at 00:00 every Sunday
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    # Check out the code from the repository.
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14' 
+
+    #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend  
+
+      # Run lint.
+      - name: Run lint
+        run: npx eslint
+        working-directory: starter/frontend
+
+      # Test Job Setup.
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      # Check out the code from the repository.
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend 
+
+      # Run the tests interactively. You'll need to press `a` to run the tests
+      - name: Run tests
+        run: npm test
+        working-directory: starter/frontend 
+
+#Build Job
+  build:
+  #job should only run after the first 2 succeed
+    runs-on: ubuntu-latest
+    env:
+      REACT_APP_MOVIE_API_URL: http://localhost:5000
+    needs: [lint, test]
+    steps:
+      #  Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend 
+
+    # Build the Image
+      - name: Build Docker image
+        run: |
+          docker build --build-arg REACT_APP_MOVIE_API_URL=${{ env.REACT_APP_MOVIE_API_URL }} --tag=mp-frontend:latest .
+        working-directory: starter/frontend
+
+      # Run Deploy to Server command
+      - name: Deploy to Server
+        run: |
+          echo "Deploying to server..."
+          # Add your deployment commands 

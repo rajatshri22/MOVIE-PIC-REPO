@@ -1,0 +1,164 @@
+name: Backend Continuous Integration
+
+# The workflow runs on schedule (Sunday at 0:00) and on push to the main branch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 0 * * 0'  
+
+#lint job
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+      # Check out the code from the repository.
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+     # Set up a python environment using the specified  version.
+      - name: Setup Python 3.10.16
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.10.16
+      
+      # Set up a pip environment.
+      - name: Install pipenv
+        run: pip install pipenv
+        working-directory: starter/backend
+ 
+    # Run the pip test.
+      - name: Run tests pip
+        run: |
+          pipenv install --dev
+          pipenv run pytest
+        working-directory: starter/backend
+
+      # Install the dependencies.
+      - name: Install dependencies
+        run: pipenv install
+        working-directory: starter/backend
+
+      # Run the test.
+      - name: Run test
+        run: pipenv run test
+        working-directory: starter/backend
+
+      # Run lint.
+      - name: Run lint
+        run: pipenv run lint
+        working-directory: starter/backend
+
+      # Send a console message at completion.
+      - run: |
+          echo "Hello ${{github.actor}}. You pushed to ${{github.repository}} at $(date)."
+
+      # Test Job Setup.
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      # Check out the code from the repository.
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+     # Set up a python environment using the specified  version.
+      - name: Setup Python 3.10.16
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.10.16
+      
+      # Set up a pip environment.
+      - name: Install pipenv
+        run: pip install pipenv
+        working-directory: starter/backend
+ 
+    # Run the pip test.
+      - name: Run tests pip
+        run: |
+          pipenv install --dev
+          pipenv run pytest
+        working-directory: starter/backend
+
+      # Install the dependencies.
+      - name: Install dependencies
+        run: pipenv install
+        working-directory: starter/backend
+
+    
+      # Run the test.
+      - name: Run test
+        run: pipenv run test
+        working-directory: starter/backend
+
+      # Run lint.
+      - name: Run lint
+        run: pipenv run lint
+        working-directory: starter/backend
+
+#Build Job
+  build:
+  #job should only run after the first 2 succeed
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      #  Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+     
+     # Set up a python environment using the specified  version.
+      - name: Setup Python 3.10.16
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.10.16
+      
+      # Set up a pip environment.
+      - name: Install pipenv
+        run: pip install pipenv
+        working-directory: starter/backend
+ 
+    # Run the pip test.
+      - name: Run tests pip
+        run: |
+          pipenv install --dev
+          pipenv run pytest
+        working-directory: starter/backend
+
+      # Install the dependencies.
+      - name: Install dependencies
+        run: pipenv install
+        working-directory: starter/backend
+
+    # Build the Image
+      - name: Build Docker image
+        run: |
+          docker build --tag mp-backend:latest .
+        working-directory: starter/backend
+
+      # Run Deploy to Server command
+      - name: Deploy to Server
+        run: |
+          echo "Deploying to server..."
+          # Add your deployment commands 
