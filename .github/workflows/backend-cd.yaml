@@ -162,12 +162,6 @@ jobs:
         id: vars
         run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-    # Build the Image
-      - name: Build Docker image
-        run: |
-          docker build --tag mp-backend:latest .
-        working-directory: starter/backend
-
       # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -180,6 +174,18 @@ jobs:
       - name: Log in to AWS ECR
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 585581564233.dkr.ecr.us-east-1.amazonaws.com
+
+    # Build the Image
+      - name: Build Docker image
+        run: |
+          docker build --tag mp-backend:latest .
+        working-directory: starter/backend
+
+      - name: Push Docker image to ECR
+        run: |
+          docker tag mp-backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/mp-backend:${{ env.GIT_SHA }}
+          docker push 585581564233.dkr.ecr.us-east-1.amazonaws.com/mp-backend:${{ env.GIT_SHA }}
+
 
 
       - name: Check if image exists in ECR
@@ -197,7 +203,7 @@ jobs:
         if: steps.check_image.outcome == 'failure'	  
         run: |
           cd starter/backend
-          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ env.GIT_SHA }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
           docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
@@ -207,7 +213,7 @@ jobs:
         if: steps.check_image.outcome == 'failure'	  
         run: |
           cd starter/backend
-          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ env.GIT_SHA }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker push "$IMAGE_TAG_LOWERCASE"
           docker push "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
