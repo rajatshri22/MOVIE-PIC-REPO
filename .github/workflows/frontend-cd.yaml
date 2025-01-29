@@ -111,11 +111,6 @@ jobs:
 
       - name: Tag Docker image
         run: |
-          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
-        working-directory: starter/backend
-
-      - name: Tag Docker image
-        run: |
           docker tag frontend:latest ${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
         working-directory: starter/frontend
 
