@@ -55,7 +55,7 @@ jobs:
 
       - name: Run Unit Tests
         run: npm test
-        working-directory: cd frontend/src/components/__tests__
+        working-directory: starter/frontend/src/components/__tests__
 
   build:
     runs-on: ubuntu-latest
