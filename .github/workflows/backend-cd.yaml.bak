@@ -202,6 +202,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: '>=18'
+     
+     # Set up a python environment using the specified  version.
+      - name: Setup Python 3.10.16
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.10.16
+      
+      # Set up a pip environment.
+      - name: Install pipenv
+        run: pip install pipenv
+        working-directory: starter/backend
+ 
+
+      # Install the dependencies.
+      - name: Install dependencies
+        run: pipenv install
+        working-directory: starter/backend
+
       # Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -211,25 +234,48 @@ jobs:
           aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
           aws-region: us-east-1  
 
-      # Download kubectl binary
-      - name: Download kubectl binaries
+
+      # Run Deploy to Server command
+      - name: Deploy to Server
         run: |
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          
-      # Install kubectl
-      - name: Install Kubectl
+          echo "Deploying to server..."
+          # Add your deployment commands 
+
+
+    # Build the Image
+      - name: Build Docker image
         run: |
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-          kubectl version --client
+          docker build --tag mp-backend:latest .
+        working-directory: .github/workflows/backend/starter/backend
+
+    # Run the Image
+      - name: Run Docker Image
+        run: |
+          docker run -p 5000:5000 --name mp-backend -d my-backend
+        working-directory: .github/workflows/backend/starter/backend
+
+    # Check the running application
+      - name: Check Running Application
+        run: curl http://localhost:5000/movies
+        working-directory: .github/workflows/backend/starter/backend
+
+    # Review Logs
+      - name: Review Logs
+        run: |
+          docker logs -f my-backend
+        working-directory: .github/workflows/backend/starter/backend
+
+    # Stop the application
+      - name: Stop docker
+        run: |
+          docker stop
+        working-directory: .github/workflows/backend/starter/backend
+
+      #- name: Build application
+      #  run: REACT_APP_MOVIE_API_URL=http://localhost:5000 npm start
+      #  working-directory: .github/workflows/frontend
       
-      # Configure kubectl to interact with the EKS cluster
-      - name: Set up kubectl for EKS
-        run: |
-          aws eks --region us-east-1 update-kubeconfig --name cluster
-  
-      # Deploy to Kubernetes
-      - name: Deploy to Kubernetes
-        run: |
-          cd backend
-          kubectl apply -k k8s/
-          
+      #- name: Serve application
+      #  run: |
+      #    npx http-server ./frontend/ -p 8080 &  # Serve the index.html file
+      #    sleep 5  # Wait for the server to start

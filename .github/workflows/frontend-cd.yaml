@@ -9,44 +9,55 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+
+
+    # Check out the code from the repository.
+      - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Node.js
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
         uses: actions/setup-node@v2
         with:
-          node-version: "18"
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-		  
-      - name: Install Dependencies
-        run: cd frontend && npm ci
-      - name: Run Linting
-        run: cd frontend && npm run lint
+          node-version: '>=18'
+
+    #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend  
+
+      # Run lint.
+      - name: Run lint
+        run: npm run lint
+        working-directory: starter/frontend
+
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+    # Check out the code from the repository.
+      - name: Checkout code
         uses: actions/checkout@v2
-      - name: Set up Node.js
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
         uses: actions/setup-node@v2
         with:
-          node-version: "18"
-      - name: Cache Node.js dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-		  
-      - name: Install Dependencies
-        run: cd frontend && npm ci
+          node-version: '>=18'
+
+    #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend  
+
+      # Run lint.
+      - name: Run lint
+        run: npm run lint
+        working-directory: starter/frontend
+
       - name: Run Unit Tests
-        run: cd frontend/src/components/__tests__ && npm test
+        run: npm test
+        working-directory: cd frontend/src/components/__tests__
 
   build:
     runs-on: ubuntu-latest
@@ -54,22 +65,41 @@ jobs:
       - lint
       - test
     steps:
-      - name: Checkout Code
+    # Check out the code from the repository.
+      - name: Checkout code
         uses: actions/checkout@v2
+
+      # Set up a Node.js environment using the specified node version.
+      - name: Setup NodeJS
+        uses: actions/setup-node@v2
+        with:
+          node-version: '>=18'
+
+    #Install dependencies
+      - name: Install dependencies
+        run: npm install
+        working-directory: starter/frontend  
+
       - name: Fix permissions for react-scripts
-        run: |
-          cd frontend
-          chmod +x node_modules/.bin/react-scripts
+        run: chmod +x node_modules/.bin/react-scripts
+        working-directory: starter/frontend
+
       - name: Build Frontend Application
-        run: cd frontend && npm run build
-      - name: Set up AWS credentials
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+        run: npm run build
+        working-directory: starter/frontend
+
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+          aws-region: us-east-1  
+
       - name: Log in to AWS ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY }}
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY }}
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
       - name: Check if image exists in ECR
