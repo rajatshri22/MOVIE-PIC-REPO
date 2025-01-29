@@ -168,20 +168,22 @@ jobs:
           docker build --tag mp-backend:latest .
         working-directory: starter/backend
 
-      - name: Tag Docker image
-        run: |
-          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/starter/backend:${{ env.GIT_SHA }}
-
-
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
           region: us-east-1
           registry-type: private
+          
+      - name: Tag Docker image
+        run: |
+          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
+
+
+
 
       - name: Push Docker image to ECR
         run: |
-          docker push ***.dkr.ecr.us-east-1.amazonaws.com/starter/backend:${{ env.GIT_SHA }}
+          docker push ***.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
 
 #Build Job
   deploy:
