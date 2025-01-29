@@ -156,7 +156,7 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          region: us-east-1  # Specify your AWS region here
+          aws-region: us-east-1  
           registry-type: private
           mask-password: true  # Set to true to mask the password in logs
           skip-logout: false
