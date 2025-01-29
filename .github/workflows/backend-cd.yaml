@@ -226,7 +226,14 @@ jobs:
       - name: Set up kubectl for EKS
         run: |
           aws eks --region us-east-1 update-kubeconfig --name cluster
-  
+
+      # Validate Configuration: to Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -k k8s/ --validate=false
+        working-directory: starter/backend
+
+
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
