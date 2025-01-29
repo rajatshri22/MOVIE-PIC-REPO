@@ -178,13 +178,13 @@ jobs:
     # Build the Image
       - name: Build Docker image
         run: |
-          docker build --tag mp-backend:latest .
+          docker build -t my-image .
         working-directory: starter/backend
 
       - name: Push Docker image to ECR
         run: |
-          docker tag mp-backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/mp-backend:${{ env.GIT_SHA }}
-          docker push 585581564233.dkr.ecr.us-east-1.amazonaws.com/mp-backend:${{ env.GIT_SHA }}
+          docker tag my-image:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/my-image:${{ env.GIT_SHA }}
+          docker push 585581564233.dkr.ecr.us-east-1.amazonaws.com/my-image:${{ env.GIT_SHA }}
 
 
 
