@@ -146,10 +146,10 @@ jobs:
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
 
 
-     - name: Configure k8s cluster
+      - name: Configure k8s cluster
         working-directory: starter/frontend/k8s
         run: |
-            aws eks update-kubeconfig --name cluster --region us-east-1
+          aws eks update-kubeconfig --name cluster --region us-east-1
 
 
       - name: Set docker image
