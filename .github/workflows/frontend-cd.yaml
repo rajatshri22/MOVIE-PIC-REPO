@@ -98,34 +98,23 @@ jobs:
       - name: Log in to AWS ECR
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY }}
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-      - name: Check if image exists in ECR
-        id: check_image
-        run: |
-          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:latest"
-              if aws ecr describe-images --repository-name ${{ secrets.AWS_ECR_REPOSITORY }} --image-ids imageTag=latest; then
-                echo "Image exists."
-              else
-                echo "Image not found."
-                exit 1
-              fi
-        continue-on-error: true
-      - name: Build Docker image
-        if: steps.check_image.outcome == 'failure'
-        run: |
-          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}"
-          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
-          docker build -t "$IMAGE_TAG_LOWERCASE" -f frontend/Dockerfile frontend --build-arg REACT_APP_MOVIE_API_URL="${{ secrets.REACT_APP_MOVIE_API_URL }}"
-          docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY }}:latest"
-      - name: Push Docker image to AWS ECR
-        if: steps.check_image.outcome == 'failure' 	  
-        run: |
-          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}"
-          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
-          docker push "$IMAGE_TAG_LOWERCASE"
-          docker push "${{ secrets.AWS_ECR_REPOSITORY }}:latest"
 
+    # Build the Image
+      - name: Build Docker image
+        run: |
+          docker build -t frontend:latest .
+        working-directory: starter/frontend
+
+
+      - name: Tag Docker image
+        run: |
+          docker tag frontend:latest ${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
+        working-directory: starter/frontend
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
+        working-directory: starter/frontend
 
   deploy:
     name: Deploy Frontend to Kubernetes
