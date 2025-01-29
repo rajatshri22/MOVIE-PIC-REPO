@@ -201,6 +201,8 @@ jobs:
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
           docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
+        working-directory: starter/backend
+
       - name: Push Docker image to AWS ECR
         if: steps.check_image.outcome == 'failure'	  
         run: |
@@ -209,6 +211,7 @@ jobs:
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker push "$IMAGE_TAG_LOWERCASE"
           docker push "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
+        working-directory: starter/backend
 
 
 
