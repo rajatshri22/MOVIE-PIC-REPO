@@ -196,7 +196,7 @@ jobs:
       - name: Build Docker image
         if: steps.check_image.outcome == 'failure'	  
         run: |
-          cd backend
+          cd starter/backend
           IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
@@ -206,7 +206,7 @@ jobs:
       - name: Push Docker image to AWS ECR
         if: steps.check_image.outcome == 'failure'	  
         run: |
-          cd backend
+          cd starter/backend
           IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker push "$IMAGE_TAG_LOWERCASE"
