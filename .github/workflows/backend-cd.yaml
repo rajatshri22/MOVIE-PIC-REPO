@@ -170,7 +170,7 @@ jobs:
 
       - name: Tag Docker image
         run: |
-          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:223ae30
+          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
 
 
       - name: Log in to Amazon ECR
