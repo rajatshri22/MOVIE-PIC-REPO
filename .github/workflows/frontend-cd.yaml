@@ -146,22 +146,18 @@ jobs:
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
 
 
-      # Update to Kubernetes
-      - name: Update to Kubernetes
+     - name: Configure k8s cluster
+        working-directory: starter/frontend/k8s
         run: |
-          aws eks update-kubeconfig --name cluster --region us-east-1a
-        working-directory: starter/frontend  
+            aws eks update-kubeconfig --name cluster --region us-east-1
 
 
-      # Deploy to Kubernetes
-      - name: Config to Kubernetes
+      - name: Set docker image
+        working-directory: starter/frontend/k8s
         run: |
-          kubectl config current-context
-        working-directory: starter/frontend  
+          kustomize edit set image frontend=${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
 
-
-      # Deploy to Kubernetes
-      - name: Deploy to Kubernetes
+      - name: Deploy to kubernetes
+        working-directory: starter/frontend/k8s
         run: |
-          kubectl apply -k k8s/
-        working-directory: starter/frontend  
+          kustomize build | kubectl apply -f -
