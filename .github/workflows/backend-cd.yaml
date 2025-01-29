@@ -168,9 +168,20 @@ jobs:
           docker build --tag mp-backend:latest .
         working-directory: starter/backend
 
+      - name: Tag Docker image
+        run: |
+          docker tag backend:latest ***.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
+
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          region: us-east-1
+          registry-type: private
+
       - name: Push Docker image to ECR
         run: |
-          docker push ${{ secrets.aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
+          docker push ***.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
 
 #Build Job
   deploy:
@@ -185,7 +196,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v2
         with:
-          node-version: '14'  
+          node-version: '>=18'
      
      # Set up a python environment using the specified  version.
       - name: Setup Python 3.10.16
