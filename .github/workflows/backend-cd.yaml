@@ -18,18 +18,18 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pipenv
-          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('backend/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('starter/backend/Pipfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pipenv-deps-		  
       - name: Install dependencies with pipenv
         run: |
-          cd backend 
+          cd starter/backend 
           python -m pip install --upgrade pip
           pip install pipenv
           pipenv install --dev
       - name: Run linting with flake8
         id: lint
-        run: cd backend &&  pipenv run flake8 --max-line-length=120
+        run: cd starter/backend &&  pipenv run flake8 --max-line-length=120
         continue-on-error: false
   test:
     runs-on: ubuntu-latest
@@ -44,17 +44,17 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.cache/pipenv
-          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('backend/Pipfile.lock') }}
+          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('starter/backend/Pipfile.lock') }}
           restore-keys: |
             ${{ runner.os }}-pipenv-deps-		  
       - name: Install dependencies with pipenv
         run: |
-          cd backend 
+          cd starter/backend 
           python -m pip install --upgrade pip
           pip install pipenv 
           pipenv install --dev
       - name: Run tests with pytest
-        run: cd backend && pipenv run pytest --maxfail=1 --disable-warnings -q
+        run: cd starter/backend && pipenv run pytest --maxfail=1 --disable-warnings -q
   build:
     runs-on: ubuntu-latest
     needs:
@@ -98,7 +98,7 @@ jobs:
       - name: Build Docker image
         if: steps.check_image.outcome == 'failure'	  
         run: |
-          cd backend
+          cd starter/backend
           IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_BD  }}:${{ github.sha }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
@@ -106,14 +106,14 @@ jobs:
       - name: Push Docker image to AWS ECR
         if: steps.check_image.outcome == 'failure'	  
         run: |
-          cd backend
+          cd starter/backend
           IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_BD  }}:${{ github.sha }}"
           IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
           docker push "$IMAGE_TAG_LOWERCASE"
           docker push "${{ secrets.AWS_ECR_REPOSITORY_BD }}:latest"		  
 
   deploy:
-    name: Deploy Backend to Kubernetes
+    name: Deploy starter/backend to Kubernetes
     needs:
       - build
     runs-on: ubuntu-latest
@@ -144,5 +144,5 @@ jobs:
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          cd backend
+          cd starter/backend
           kubectl apply -k k8s/
