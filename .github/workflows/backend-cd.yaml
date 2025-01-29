@@ -230,6 +230,7 @@ jobs:
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          cd backend
           kubectl apply -k k8s/
+        working-directory: starter/backend
+
           
