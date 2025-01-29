@@ -178,14 +178,19 @@ jobs:
     # Build the Image
       - name: Build Docker image
         run: |
-          docker build -t my-image .
+          docker build -t my-image:latest .
+        working-directory: starter/backend
+
+
+      - name: Tag Docker image
+        run: |
+          docker tag my-image:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/my-image:${{ env.GIT_SHA }}
         working-directory: starter/backend
 
       - name: Push Docker image to ECR
         run: |
-          docker tag my-image:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/my-image:${{ env.GIT_SHA }}
           docker push 585581564233.dkr.ecr.us-east-1.amazonaws.com/my-image:${{ env.GIT_SHA }}
-
+        working-directory: starter/backend
 
 
       - name: Check if image exists in ECR
@@ -219,18 +224,6 @@ jobs:
           docker push "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
         working-directory: starter/backend
 
-
-
-      - name: Tag Docker image
-        run: |
-          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
-
-
-
-
-      - name: Push Docker image to ECR
-        run: |
-          docker push ***.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
 
 #Build Job
   deploy:
