@@ -138,19 +138,20 @@ jobs:
         run: |
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           kubectl version --client
+
       - name: Set up AWS credentials
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
+
       # Configure kubectl to interact with the EKS cluster
       - name: Set up kubectl for EKS
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name cluster
+          aws eks --region us-east-1 update-kubeconfig --name cluster
   
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          cd frontend
           kubectl apply -k k8s/
-  
+        working-directory: starter/frontend  
