@@ -156,9 +156,9 @@ jobs:
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          aws-region: "us-east-1"  
+          region: "us-east-1"  
           registry-type: private
-          mask-password: false  # Set to true to mask the password in logs
+          mask-password: true  # Set to true to mask the password in logs
           skip-logout: false
       
       - name: Build and push Docker image
