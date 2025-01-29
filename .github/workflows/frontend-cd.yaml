@@ -145,6 +145,14 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
 
+
+      # Update to Kubernetes
+      - name: Update to Kubernetes
+        run: |
+          aws eks update-kubeconfig --name cluster --region us-east-1a
+        working-directory: starter/frontend  
+
+
       # Deploy to Kubernetes
       - name: Config to Kubernetes
         run: |
