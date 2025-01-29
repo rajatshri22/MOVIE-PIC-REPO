@@ -181,6 +181,37 @@ jobs:
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 585581564233.dkr.ecr.us-east-1.amazonaws.com
 
+
+      - name: Check if image exists in ECR
+        id: check_image
+        run: |
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
+              if aws ecr describe-images --repository-name ${{ secrets.AWS_ECR_REPOSITORY_V }} --image-ids imageTag=latest; then
+                echo "Image exists."
+              else
+                echo "Image not found."
+                exit 1
+              fi
+        continue-on-error: true
+      - name: Build Docker image
+        if: steps.check_image.outcome == 'failure'	  
+        run: |
+          cd backend
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
+          docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
+      - name: Push Docker image to AWS ECR
+        if: steps.check_image.outcome == 'failure'	  
+        run: |
+          cd backend
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_V  }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker push "$IMAGE_TAG_LOWERCASE"
+          docker push "${{ secrets.AWS_ECR_REPOSITORY_V }}:latest"
+
+
+
       - name: Tag Docker image
         run: |
           docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
