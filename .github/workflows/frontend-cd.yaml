@@ -145,10 +145,6 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
 
-      # Configure kubectl to interact with the EKS cluster
-      - name: Set up kubectl for EKS
-        run: |
-          aws eks --region us-east-1 update-kubeconfig --name cluster
   
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
