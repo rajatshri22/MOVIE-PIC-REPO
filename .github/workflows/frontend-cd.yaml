@@ -149,7 +149,7 @@ jobs:
       - name: Configure k8s cluster
         working-directory: starter/frontend/k8s
         run: |
-          aws --no-verify-ssl eks update-kubeconfig --name cluster --region us-east-1
+          aws eks update-kubeconfig --name cluster --region us-east-1
 
 
       - name: Set docker image
