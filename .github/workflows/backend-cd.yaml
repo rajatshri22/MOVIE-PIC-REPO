@@ -1,155 +1,72 @@
-name: Backend Continuous Deployment
-
+---
+name: Backend CD Pipeline
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
+      - main  
 jobs:
   lint:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
-      # Check out the code from the repository.
         uses: actions/checkout@v2
-
-      # Set up a Node.js environment using the specified node version.
-      - name: Setup NodeJS
-        uses: actions/setup-node@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          node-version: '>=18'
-     # Set up a python environment using the specified  version.
-      - name: Setup Python 3.10.16
-        uses: actions/setup-python@v1
+          python-version: "3.10"
+      - name: Cache Python dependencies with Pipenv
+        uses: actions/cache@v2
         with:
-          python-version: 3.10.16
-      
-      # Set up a pip environment.
-      - name: Install pipenv
-        run: pip install pipenv
-        working-directory: starter/backend
- 
-    # Run the pip test.
-      - name: Run tests pip
+          path: ~/.cache/pipenv
+          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('backend/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-deps-		  
+      - name: Install dependencies with pipenv
         run: |
+          cd backend 
+          python -m pip install --upgrade pip
+          pip install pipenv
           pipenv install --dev
-          pipenv run pytest
-        working-directory: starter/backend
-
-      # Install the dependencies.
-      - name: Install dependencies
-        run: pipenv install
-        working-directory: starter/backend
-
-      # Run the test.
-      - name: Run test
-        run: pipenv run test
-        working-directory: starter/backend
-
-      # Run lint.
-      - name: Run lint
-        run: pipenv run lint
-        working-directory: starter/backend
-
-      # Send a console message at completion.
-      - run: |
-          echo "Hello ${{github.actor}}. You pushed to ${{github.repository}} at $(date)."
-
-      # Test Job Setup.
+      - name: Run linting with flake8
+        id: lint
+        run: cd backend &&  pipenv run flake8 --max-line-length=120
+        continue-on-error: false
   test:
     runs-on: ubuntu-latest
-    needs: lint
     steps:
-      # Check out the code from the repository.
       - name: Checkout code
         uses: actions/checkout@v2
-
-      # Set up a Node.js environment using the specified node version.
-      - name: Setup NodeJS
-        uses: actions/setup-node@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          node-version: '>=18'
-     # Set up a python environment using the specified  version.
-      - name: Setup Python 3.10.16
-        uses: actions/setup-python@v1
+          python-version: "3.10"
+      - name: Cache Python dependencies with Pipenv
+        uses: actions/cache@v2
         with:
-          python-version: 3.10.16
-      
-      # Set up a pip environment.
-      - name: Install pipenv
-        run: pip install pipenv
-        working-directory: starter/backend
- 
-    # Run the pip test.
-      - name: Run tests pip
+          path: ~/.cache/pipenv
+          key: ${{ runner.os }}-pipenv-deps-${{ hashFiles('backend/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-deps-		  
+      - name: Install dependencies with pipenv
         run: |
+          cd backend 
+          python -m pip install --upgrade pip
+          pip install pipenv 
           pipenv install --dev
-          pipenv run pytest
-        working-directory: starter/backend
-
-      # Install the dependencies.
-      - name: Install dependencies
-        run: pipenv install
-        working-directory: starter/backend
-
-    
-      # Run the test.
-      - name: Run test
-        run: pipenv run test
-        working-directory: starter/backend
-
-      # Run lint.
-      - name: Run lint
-        run: pipenv run lint
-        working-directory: starter/backend
-
-#Build Job
+      - name: Run tests with pytest
+        run: cd backend && pipenv run pytest --maxfail=1 --disable-warnings -q
   build:
-  #job should only run after the first 2 succeed
     runs-on: ubuntu-latest
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-    needs: [lint, test]
+    needs:
+      - lint
+      - test
     steps:
-      #  Checkout code
       - name: Checkout code
         uses: actions/checkout@v2
-
-      # Set up a Node.js environment using the specified node version.
-      - name: Setup NodeJS
-        uses: actions/setup-node@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
         with:
-          node-version: '>=18'
-
-     
-     # Set up a python environment using the specified  version.
-      - name: Setup Python 3.10.16
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.10.16
-      
-      # Set up a pip environment.
-      - name: Install pipenv
-        run: pip install pipenv
-        working-directory: starter/backend
- 
-    # Run the pip test.
-      - name: Run tests pip
-        run: |
-          pipenv install --dev
-          pipenv run pytest
-        working-directory: starter/backend
-
-      # Install the dependencies.
-      - name: Install dependencies
-        run: pipenv install
-        working-directory: starter/backend
-
+          python-version: '3.10'
       - name: Install dependencies and Docker (with containerd.io resolution)
         run: |
           sudo apt-get remove docker docker-engine docker.io containerd runc
@@ -157,124 +74,75 @@ jobs:
           sudo rm -rf /etc/bash_completion.d/docker /usr/local/bin/docker-compose /etc/bash_completion.d/docker-compose
           sudo apt install containerd -y
           sudo apt install -y docker.io docker-compose
-          
       - name: Set up AWS credentials
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
-
-
-      - name: Log in to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          region: "us-east-1"  
-          registry-type: private
-          mask-password: true  # Set to true to mask the password in logs
-          skip-logout: false
-      
-      - name: Build and push Docker image
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV	  
+      - name: Log in to AWS ECR
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          # Your Docker build and push commands here
-
-      - name: Get Git SHA
-        id: vars
-        run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-    # Build the Image
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY_BD }}
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}	 
+      - name: Check if image exists in ECR
+        id: check_image
+        run: |
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_BD }}:latest"
+              if aws ecr describe-images --repository-name ${{ secrets.AWS_ECR_REPOSITORY_BD }} --image-ids imageTag=latest; then
+                echo "Image exists."
+              else
+                echo "Image not found."
+                exit 1
+              fi
+        continue-on-error: true
       - name: Build Docker image
+        if: steps.check_image.outcome == 'failure'	  
         run: |
-          docker build --tag mp-backend:latest .
-        working-directory: starter/backend
-
-      - name: Push Docker image to ECR
+          cd backend
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_BD  }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker build -t "$IMAGE_TAG_LOWERCASE" -f Dockerfile .
+          docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY_BD }}:latest"
+      - name: Push Docker image to AWS ECR
+        if: steps.check_image.outcome == 'failure'	  
         run: |
-          docker push ${{ secrets.aws_account_id }}.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
+          cd backend
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY_BD  }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker push "$IMAGE_TAG_LOWERCASE"
+          docker push "${{ secrets.AWS_ECR_REPOSITORY_BD }}:latest"		  
 
-#Build Job
   deploy:
+    name: Deploy Backend to Kubernetes
+    needs:
+      - build
     runs-on: ubuntu-latest
-    needs: [build]
     steps:
-     # Check out the code from the repository.
       - name: Checkout code
         uses: actions/checkout@v2
-
-      # Set up a Node.js environment using the specified node version.
-      - name: Setup NodeJS
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'  
-     
-     # Set up a python environment using the specified  version.
-      - name: Setup Python 3.10.16
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.10.16
-      
-      # Set up a pip environment.
-      - name: Install pipenv
-        run: pip install pipenv
-        working-directory: starter/backend
- 
-
-      # Install the dependencies.
-      - name: Install dependencies
-        run: pipenv install
-        working-directory: starter/backend
-
-      # Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
-          aws-region: us-east-1  
-
-
-      # Run Deploy to Server command
-      - name: Deploy to Server
+  
+      # Download kubectl binary
+      - name: Download kubectl binaries
         run: |
-          echo "Deploying to server..."
-          # Add your deployment commands 
-
-
-    # Build the Image
-      - name: Build Docker image
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          
+      # Install kubectl
+      - name: Install Kubectl
         run: |
-          docker build --tag mp-backend:latest .
-        working-directory: .github/workflows/backend/starter/backend
-
-    # Run the Image
-      - name: Run Docker Image
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          kubectl version --client
+      - name: Set up AWS credentials
         run: |
-          docker run -p 5000:5000 --name mp-backend -d my-backend
-        working-directory: .github/workflows/backend/starter/backend
-
-    # Check the running application
-      - name: Check Running Application
-        run: curl http://localhost:5000/movies
-        working-directory: .github/workflows/backend/starter/backend
-
-    # Review Logs
-      - name: Review Logs
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
+      # Configure kubectl to interact with the EKS cluster
+      - name: Set up kubectl for EKS
         run: |
-          docker logs -f my-backend
-        working-directory: .github/workflows/backend/starter/backend
-
-    # Stop the application
-      - name: Stop docker
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name cluster
+  
+      # Deploy to Kubernetes
+      - name: Deploy to Kubernetes
         run: |
-          docker stop
-        working-directory: .github/workflows/backend/starter/backend
-
-      #- name: Build application
-      #  run: REACT_APP_MOVIE_API_URL=http://localhost:5000 npm start
-      #  working-directory: .github/workflows/frontend
-      
-      #- name: Serve application
-      #  run: |
-      #    npx http-server ./frontend/ -p 8080 &  # Serve the index.html file
-      #    sleep 5  # Wait for the server to start
+          cd backend
+          kubectl apply -k k8s/

@@ -1,0 +1,136 @@
+name: Frontend CD Pipeline
+
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-		  
+      - name: Install Dependencies
+        run: cd frontend && npm ci
+      - name: Run Linting
+        run: cd frontend && npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-		  
+      - name: Install Dependencies
+        run: cd frontend && npm ci
+      - name: Run Unit Tests
+        run: cd frontend/src/components/__tests__ && npm test
+
+  build:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Fix permissions for react-scripts
+        run: |
+          cd frontend
+          chmod +x node_modules/.bin/react-scripts
+      - name: Build Frontend Application
+        run: cd frontend && npm run build
+      - name: Set up AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+      - name: Log in to AWS ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY }}
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+      - name: Check if image exists in ECR
+        id: check_image
+        run: |
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:latest"
+              if aws ecr describe-images --repository-name ${{ secrets.AWS_ECR_REPOSITORY }} --image-ids imageTag=latest; then
+                echo "Image exists."
+              else
+                echo "Image not found."
+                exit 1
+              fi
+        continue-on-error: true
+      - name: Build Docker image
+        if: steps.check_image.outcome == 'failure'
+        run: |
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker build -t "$IMAGE_TAG_LOWERCASE" -f frontend/Dockerfile frontend --build-arg REACT_APP_MOVIE_API_URL="${{ secrets.REACT_APP_MOVIE_API_URL }}"
+          docker tag "$IMAGE_TAG_LOWERCASE" "${{ secrets.AWS_ECR_REPOSITORY }}:latest"
+      - name: Push Docker image to AWS ECR
+        if: steps.check_image.outcome == 'failure' 	  
+        run: |
+          IMAGE_TAG="${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}"
+          IMAGE_TAG_LOWERCASE=$(echo $IMAGE_TAG | tr '[:upper:]' '[:lower:]')
+          docker push "$IMAGE_TAG_LOWERCASE"
+          docker push "${{ secrets.AWS_ECR_REPOSITORY }}:latest"
+
+
+  deploy:
+    name: Deploy Frontend to Kubernetes
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+  
+      # Download kubectl binary
+      - name: Download kubectl binaries
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          
+      # Install kubectl
+      - name: Install Kubectl
+        run: |
+          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          kubectl version --client
+      - name: Set up AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
+      # Configure kubectl to interact with the EKS cluster
+      - name: Set up kubectl for EKS
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name cluster
+  
+      # Deploy to Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          cd frontend
+          kubectl apply -k k8s/
+  
