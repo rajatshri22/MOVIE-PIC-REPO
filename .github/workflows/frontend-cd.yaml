@@ -31,7 +31,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: lint
     steps:
     # Check out the code from the repository.
       - name: Checkout code
@@ -160,3 +159,8 @@ jobs:
         working-directory: starter/frontend/k8s
         run: |
           kustomize build | kubectl apply -f -
+
+      - name: Get kubectl services
+        working-directory: starter/frontend/k8s
+        run: |
+          kubectl get services
