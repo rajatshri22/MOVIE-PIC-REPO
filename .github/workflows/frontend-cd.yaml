@@ -78,6 +78,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('starter/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
       # Set up a Node.js environment using the specified node version.
       - name: Setup NodeJS
         uses: actions/setup-node@v2
@@ -112,6 +125,22 @@ jobs:
       - name: Log in to AWS ECR
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ECR_REPOSITORY }}
+
+      - name: Set up ECR login
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+    # Build the Image
+      - name: Build the docker image
+        env:
+          REACT_APP_MOVIE_API_URL: ${{ secrets.REACT_APP_MOVIE_API_URL }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg REACT_APP_MOVIE_API_URL="http://${REACT_APP_MOVIE_API_URL}" \
+            -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
 
     # Build the Image
       - name: Build the docker image
