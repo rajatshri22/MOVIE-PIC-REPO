@@ -150,15 +150,6 @@ jobs:
      #     docker build -t frontend:latest .
      #   working-directory: starter/frontend
 
-      - name: Tag Docker image
-        run: |
-          docker tag frontend:latest ${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
-        working-directory: starter/frontend
-
-      - name: Push Docker image to ECR
-        run: |
-          docker push ${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
-        working-directory: starter/frontend
 
   deploy:
     name: Deploy Frontend to Kubernetes
@@ -186,22 +177,31 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV  
 
+      - name: Push to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-      - name: Configure k8s cluster
-        working-directory: starter/frontend/k8s
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name my-cluster --region us-east-1
+
+      - name: Set image tag to newer version
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: cd k8s && kustomize edit set image frontend=$REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Deploy application to EKS cluster
+        run: cd k8s && kustomize build | kubectl apply -f -
+
+      - name: Cluster details
         run: |
-          aws eks update-kubeconfig --name cluster --region us-east-1
-
-
-      - name: Set docker image
-        working-directory: starter/frontend/k8s
-        run: |
-          kustomize edit set image frontend=${{ secrets.AWS_ECR_REPOSITORY }}:${{ env.GIT_SHA }}
-
-      - name: Deploy to kubernetes
-        working-directory: starter/frontend/k8s
-        run: |
-          kustomize build | kubectl apply -f -
+          kubectl get pods -A
+          kubectl get svc -A
+          kubectl describe pods -A
 
       - name: Get kubectl services
         working-directory: starter/frontend/k8s
