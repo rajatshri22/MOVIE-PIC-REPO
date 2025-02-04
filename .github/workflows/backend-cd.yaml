@@ -176,7 +176,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: backend
           IMAGE_TAG: ${{ github.sha }}
-        run: cd starter/backend && docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        run: docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         working-directory: starter/backend        
 
 
@@ -218,7 +218,7 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: backend
           IMAGE_TAG: ${{ github.sha }}
-        run: cd starter/backend && docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        run: docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         working-directory: starter/backend        
 
       - name: Push to ECR
