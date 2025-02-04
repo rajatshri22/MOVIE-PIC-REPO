@@ -138,7 +138,7 @@ jobs:
           REPOSITORY: frontend
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build \
+          docker buildx build \
             --build-arg REACT_APP_MOVIE_API_URL="http://${REACT_APP_MOVIE_API_URL}" \
             -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
 
