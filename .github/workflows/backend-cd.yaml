@@ -150,14 +150,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
      
-      - name: Build and push Docker image
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-          # Your Docker build and push commands here
-
-      - name: Get Git SHA
-        id: vars
-        run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       # Configure AWS credentials
       - name: Configure AWS credentials
@@ -171,6 +163,10 @@ jobs:
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 585581564233.dkr.ecr.us-east-1.amazonaws.com
 
+      - name: Set up ECR login
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Build docker image
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -178,8 +174,6 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
         working-directory: starter/backend        
-
-
 
 #Build Job
   deploy:
