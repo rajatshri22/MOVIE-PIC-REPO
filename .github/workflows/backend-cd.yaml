@@ -171,22 +171,14 @@ jobs:
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 585581564233.dkr.ecr.us-east-1.amazonaws.com
 
-    # Build the Image
-      - name: Build Docker image
-        run: |
-          docker build -t backend:latest .
-        working-directory: starter/backend
+      - name: Build docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: cd starter/backend && docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        working-directory: starter/backend        
 
-
-      - name: Tag Docker image
-        run: |
-          docker tag backend:latest 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
-        working-directory: starter/backend
-
-      - name: Push Docker image to ECR
-        run: |
-          docker push 585581564233.dkr.ecr.us-east-1.amazonaws.com/backend:${{ env.GIT_SHA }}
-        working-directory: starter/backend
 
 
 #Build Job
@@ -217,22 +209,50 @@ jobs:
           sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
           kubectl version --client
       
-      # Configure kubectl to interact with the EKS cluster
-      - name: Set up kubectl for EKS
-        run: |
-          aws eks --region us-east-1 update-kubeconfig --name cluster
+      - name: Set up ECR login
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      # Validate Configuration: to Kubernetes
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k k8s/ --validate=false
+      - name: Build docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: cd starter/backend && docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        working-directory: starter/backend        
+
+      - name: Push to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
         working-directory: starter/backend
 
 
-      # Deploy to Kubernetes
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k k8s/
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name cluster --region us-east-1
         working-directory: starter/backend
 
+
+      - name: Set image tag to newer version
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: cd starter/backend/k8s && kustomize edit set image backend=$REGISTRY/$REPOSITORY:$IMAGE_TAG
+        working-directory: starter/backend
+
+
+      - name: Deploy application to EKS cluster
+        run: cd starter/backend/k8s && kustomize build | kubectl apply -f -
+        working-directory: starter/backend
+
+
+      - name: Cluster details
+        run: |
+          kubectl get pods -A
+          kubectl get svc -A
+          kubectl describe pods -A
+        working-directory: starter/backend
           
