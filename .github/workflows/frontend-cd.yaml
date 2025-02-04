@@ -142,7 +142,7 @@ jobs:
             --build-arg REACT_APP_MOVIE_API_URL="http://${REACT_APP_MOVIE_API_URL}" \
             -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
             .
-
+        working-directory: starter/frontend
 
     # Build the Image
      # - name: Build the Docker image
