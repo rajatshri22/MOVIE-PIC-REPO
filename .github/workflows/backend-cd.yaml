@@ -240,12 +240,12 @@ jobs:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: backend
           IMAGE_TAG: ${{ github.sha }}
-        run: cd starter/backend/k8s && kustomize edit set image backend=$REGISTRY/$REPOSITORY:$IMAGE_TAG
+        run: cd k8s && kustomize edit set image backend=$REGISTRY/$REPOSITORY:$IMAGE_TAG
         working-directory: starter/backend
 
 
       - name: Deploy application to EKS cluster
-        run: cd starter/backend/k8s && kustomize build | kubectl apply -f -
+        run: cd k8s && kustomize build | kubectl apply -f -
         working-directory: starter/backend
 
 
