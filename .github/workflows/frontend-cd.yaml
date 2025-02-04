@@ -1,4 +1,4 @@
-name: Frontend Continuous Deployment Pipeline
+name: Frontend Continuous Deployment
 
 on:
   workflow_dispatch:
@@ -138,9 +138,11 @@ jobs:
           REPOSITORY: frontend
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker buildx build \
+          docker build \
             --build-arg REACT_APP_MOVIE_API_URL="http://${REACT_APP_MOVIE_API_URL}" \
             -t $REGISTRY/$REPOSITORY:$IMAGE_TAG \
+            .
+
 
     # Build the Image
      # - name: Build the Docker image
