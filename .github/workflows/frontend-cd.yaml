@@ -206,7 +206,7 @@ jobs:
 
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name my-cluster --region us-east-1
+        run: aws eks update-kubeconfig --name cluster --region us-east-1
         working-directory: starter/frontend
 
 
