@@ -209,6 +209,10 @@ jobs:
         run: aws eks update-kubeconfig --name cluster --region us-east-1
         working-directory: starter/frontend
 
+      - name: Kubectl rollout
+        run: kubectl rollout restart deploy frontend
+        working-directory: starter/frontend
+
 
       - name: Set image tag to newer version
         env:
