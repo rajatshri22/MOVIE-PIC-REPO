@@ -244,3 +244,8 @@ jobs:
         working-directory: starter/frontend/k8s
         run: |
           kubectl get pod
+
+      - name: Get frontend url
+        working-directory: starter/frontend/k8s
+        run: |
+          kubectl get svc -A

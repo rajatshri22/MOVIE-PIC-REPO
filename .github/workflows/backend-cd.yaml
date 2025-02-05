@@ -250,3 +250,7 @@ jobs:
           kubectl describe pods -A
         working-directory: starter/backend
           
+      - name: Backend URL
+        run: |
+          kubectl get svc -A
+        working-directory: starter/backend
